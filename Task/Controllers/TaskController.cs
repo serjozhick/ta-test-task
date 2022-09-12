@@ -16,11 +16,14 @@ namespace TATask.Controllers
         private const string DEFAULT_INVERT_TEXT = @"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
 
         private IStringTool StringTool { get; }
+        private IThreadTask ThreadTask { get; }
 
         public TaskController(
-            IStringTool stringTool)
+            IStringTool stringTool,
+            IThreadTask threadTask)
         {
             StringTool = stringTool;
+            ThreadTask = threadTask;
         }
 
         // GET: Task/Invert
@@ -42,6 +45,23 @@ namespace TATask.Controllers
         {
             var inverted = await StringTool.Invert(input ?? DEFAULT_INVERT_TEXT);
             return base.Content(inverted, "text/plain", Encoding.UTF8);
+        }
+
+        // POST: Task/RunParallel
+        /// <summary>
+        /// Triggers parallel execution.
+        /// </summary>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST /Task/RunParallel
+        ///
+        /// </remarks>
+        [HttpGet("RunParallel")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public Task RunParallel()
+        {
+            return ThreadTask.Execute(1000, 20);
         }
     }
 }

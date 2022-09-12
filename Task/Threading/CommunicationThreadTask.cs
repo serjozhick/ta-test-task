@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,13 +10,17 @@ namespace TATask.Threading
 {
     public class CommunicationThreadTask : IThreadTask
     {
-        public async Task Execute(int itemsCount, int threadsCount)
+        public async Task<TimeSpan> Execute(int itemsCount, int threadsCount)
         {
+            var timer = new Stopwatch();
+            timer.Start();
             var queue = new ConcurrentQueue<SomeData>();
             var cancellation = new CancellationTokenSource();
             var threads = Enumerable.Range(0, threadsCount).Select(_ => Consumer(queue, cancellation.Token)).ToArray();
             Producer(itemsCount, queue, cancellation);
+            timer.Stop();
             await Task.WhenAll(threads);
+            return timer.Elapsed;
         }
 
         private void Producer(int itemsCount, ConcurrentQueue<SomeData> queue, CancellationTokenSource cancellation) {
@@ -29,7 +35,7 @@ namespace TATask.Threading
                 if(dataQueue.TryDequeue(out var data)){ 
                     await FuncB(data);
                 } else {
-                    await Task.Delay(100, cancel);
+                    await Task.Delay(100, cancel).ContinueWith(_ => { });
                 }
             }
         }

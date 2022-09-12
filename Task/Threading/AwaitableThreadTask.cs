@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using TATask.Contracts;
@@ -7,11 +9,15 @@ namespace TATask.Threading
 {
     public class AwaitableThreadTask : IThreadTask
     {
-        public async Task Execute(int itemsCount, int threadsCount)
+        public async Task<TimeSpan> Execute(int itemsCount, int threadsCount)
         {
+            var timer = new Stopwatch();
+            timer.Start();
             var threadLimit = new SemaphoreSlim(threadsCount);
             var threads = await FuncA(itemsCount, threadLimit);
+            timer.Stop();
             await Task.WhenAll(threads);
+            return timer.Elapsed;
         }
 
         private async Task<Task[]> FuncA(int itemsCount, SemaphoreSlim threadLimit) {

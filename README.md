@@ -7,12 +7,14 @@ Represents a list of small tasks available from simple WEB API controller.
 There are four tasks.
 1. String inversion.
     > /task/invert
+
     Can have custom string input.
     > /task/invert?input=test
 2. Producer-consumer task
     > /task/run-parallel
 3. File hash
     > /task/file-hash
+
     Or with custom full file url. e.g.
     > /task/file-hash?url=http://www.africau.edu/images/default/sample.pdf
 4. Query asset prices

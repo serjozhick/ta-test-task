@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using TATask.Contracts;
 using TATask.File;
+using TATask.GraphQl;
 using TATask.StringTools;
 using TATask.Threading;
 
@@ -40,6 +41,7 @@ namespace TATask
             services.AddScoped<IStringTool, AlgorithmicTool>();
             services.AddScoped<IThreadTask, CommunicationThreadTask>();
             services.AddScoped<IRemoteFile, RemoteFile>();
+            services.AddScoped<IAssetQuery, AssetQuery>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

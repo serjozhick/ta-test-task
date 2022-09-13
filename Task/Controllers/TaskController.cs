@@ -18,19 +18,23 @@ namespace TATask.Controllers
         private const int DEFAULT_ITEMS_COUNT = 1000;
         private const int DEFAULT_THREADS_COUNT = 20;
         private const string DEFAULT_FILE_URL = @"https://speed.hetzner.de/10GB.bin";
+        private const int DEFAULT_ASSETS_LIST_SIZE = 100;
 
         private IStringTool StringTool { get; }
         private IThreadTask ThreadTask { get; }
         private IRemoteFile FileTool { get; }
+        private IAssetQuery AssetQuery { get; }
 
         public TaskController(
             IStringTool stringTool,
             IThreadTask threadTask,
-            IRemoteFile fileTool)
+            IRemoteFile fileTool,
+            IAssetQuery assetQuery)
         {
             StringTool = stringTool;
             ThreadTask = threadTask;
             FileTool = fileTool;
+            AssetQuery = assetQuery;
         }
 
         // GET: task/invert
@@ -92,6 +96,20 @@ namespace TATask.Controllers
                 return base.NotFound();
             }
             return base.Content(hash, "text/plain", Encoding.UTF8);
+        }
+        
+        // GET: task/assets
+        /// <summary>
+        /// Retrieve assets with prices.
+        /// </summary>
+        /// <param name="limit">Top by the market CAP.</param>
+        /// <response code="200">Returns Assets with prices.</response>
+        [HttpGet("assets")]
+        [Produces("application/json")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(string))]
+        public Task<Asset[]> GetFileHash([FromQuery]int? limit)
+        {
+            return AssetQuery.Execute(limit ?? DEFAULT_ASSETS_LIST_SIZE);
         }
     }
 }

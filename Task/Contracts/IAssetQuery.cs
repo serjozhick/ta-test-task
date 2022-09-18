@@ -1,9 +1,9 @@
-using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace TATask.Contracts
 {
     public interface IAssetQuery
     {
-        Task<Asset[]> Execute(int limit);
+        IAsyncEnumerable<Asset> Execute(int limit);
     }
 }

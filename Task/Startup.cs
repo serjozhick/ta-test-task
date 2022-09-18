@@ -7,9 +7,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using TATask.AssetApi;
+using TATask.AssetApi.Blocktap;
+using TATask.Assets;
+using TATask.Assets.Implementation;
+using TATask.Assets.Interface;
+using TATask.Configuration;
 using TATask.Contracts;
 using TATask.File;
-using TATask.GraphQl;
 using TATask.StringTools;
 using TATask.Threading;
 
@@ -38,10 +43,19 @@ namespace TATask
                 c.IncludeXmlComments(xmlPath);
             });
 
+            services.Configure<DefaultSettings>(cs => Configuration.GetSection("DefaultSettings").Bind(cs));
+            services.Configure<ApiSettings>(cs => Configuration.GetSection("Blocktap").Bind(cs));
+            services.Configure<PageQuerySettings>(cs => Configuration.GetSection("PageQuerySettings").Bind(cs));
+
+            services.AddAutoMapper(typeof(Startup));
+
             services.AddScoped<IStringTool, AlgorithmicTool>();
             services.AddScoped<IThreadTask, CommunicationThreadTask>();
             services.AddScoped<IRemoteFile, RemoteFile>();
             services.AddScoped<IAssetQuery, AssetQuery>();
+            services.AddScoped<IPriceService, PriceService>();
+            services.AddScoped<IAssetService, AssetService>();
+            services.AddScoped<IPricedAssetService, AssetPriceServiceAggregate>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

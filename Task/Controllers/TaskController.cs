@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Swashbuckle.AspNetCore.Annotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using TATask.Configuration;
 using TATask.Contracts;
 
 namespace TATask.Controllers
@@ -14,11 +17,7 @@ namespace TATask.Controllers
 
     public class TaskController : ControllerBase
     {
-        private const string DEFAULT_INVERT_TEXT = @"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
-        private const int DEFAULT_ITEMS_COUNT = 1000;
-        private const int DEFAULT_THREADS_COUNT = 20;
-        private const string DEFAULT_FILE_URL = @"https://speed.hetzner.de/10GB.bin";
-        private const int DEFAULT_ASSETS_LIST_SIZE = 100;
+        private DefaultSettings Settings { get; }
 
         private IStringTool StringTool { get; }
         private IThreadTask ThreadTask { get; }
@@ -29,12 +28,14 @@ namespace TATask.Controllers
             IStringTool stringTool,
             IThreadTask threadTask,
             IRemoteFile fileTool,
-            IAssetQuery assetQuery)
+            IAssetQuery assetQuery,
+            IOptions<DefaultSettings> options)
         {
             StringTool = stringTool;
             ThreadTask = threadTask;
             FileTool = fileTool;
             AssetQuery = assetQuery;
+            Settings = options.Value;
         }
 
         // GET: task/invert
@@ -54,7 +55,7 @@ namespace TATask.Controllers
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(string))]
         public async Task<ContentResult> Invert([FromQuery]string input)
         {
-            var inverted = await StringTool.Invert(input ?? DEFAULT_INVERT_TEXT);
+            var inverted = await StringTool.Invert(input ?? Settings.InvertText);
             return base.Content(inverted, "text/plain", Encoding.UTF8);
         }
 
@@ -75,7 +76,7 @@ namespace TATask.Controllers
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TimeSpan))]
         public Task<TimeSpan> RunParallel([FromQuery]int? itemsCount, [FromQuery]int? threadsCount)
         {
-            return ThreadTask.Execute(itemsCount ?? DEFAULT_ITEMS_COUNT,  threadsCount ?? DEFAULT_THREADS_COUNT);
+            return ThreadTask.Execute(itemsCount ?? Settings.ItemsCount,  threadsCount ?? Settings.ThreadsCount);
         }
 
         // GET: task/file-hash
@@ -88,9 +89,9 @@ namespace TATask.Controllers
         [HttpGet("file-hash")]
         [Produces("text/plain")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(string))]
-        public async Task<IActionResult> GetFileHash([FromQuery]string url)
+        public async Task<IActionResult> FileHash([FromQuery]string url)
         {
-            var hash = await FileTool.GetHash(url ?? DEFAULT_FILE_URL);
+            var hash = await FileTool.GetHash(url ?? Settings.FileUrl);
             if (string.IsNullOrEmpty(hash))
             {
                 return base.NotFound();
@@ -107,9 +108,9 @@ namespace TATask.Controllers
         [HttpGet("assets")]
         [Produces("application/json")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(string))]
-        public Task<Asset[]> GetFileHash([FromQuery]int? limit)
+        public IAsyncEnumerable<Asset> AssetsWithPrice([FromQuery]int? limit)
         {
-            return AssetQuery.Execute(limit ?? DEFAULT_ASSETS_LIST_SIZE);
+            return AssetQuery.Execute(limit ?? Settings.AssetListSize);
         }
     }
 }

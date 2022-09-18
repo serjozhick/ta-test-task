@@ -1,7 +1,7 @@
 using System;
-using System.Linq;
+using System.IO;
 using System.Net.Http;
-using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using TATask.Contracts;
 
@@ -11,47 +11,15 @@ namespace TATask.File
     {
         public async Task<string> GetHash(string url)
         {
-            using HttpClient client = new();
-            var digest = await TryGetDigest(client, MakeHeadRequest(url));
-            if (string.IsNullOrEmpty(digest))
-            {
-                digest = await TryGetDigest(client, MakeGetRequestWithoutBody(url));
-            }
-
-            if (!string.IsNullOrEmpty(digest))
-            {
-                return digest.Trim('"').Replace("-", "").ToUpper();
-            }
-
-            return digest;
-        }
-
-        private async Task<string> TryGetDigest(HttpClient client, HttpRequestMessage message)
-        {
-            try
-            {
-                var response = await client.SendAsync(message);
-                response.EnsureSuccessStatusCode();
-                var checkSumHeaders = response.Headers.GetValues("ETag");
-                return checkSumHeaders.FirstOrDefault();
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private HttpRequestMessage MakeHeadRequest(string url) => new (HttpMethod.Head, new Uri(url));
-
-        private HttpRequestMessage MakeGetRequestWithoutBody(string url)
-        {
-            var request = new HttpRequestMessage
-            {
-                RequestUri = new Uri(url),
-                Method = HttpMethod.Get,
-            };
-            request.Headers.Range = new RangeHeaderValue(0, 1);
-            return request;
+            using SHA256 sha256Algorithm = SHA256.Create();
+            using HttpClient client = new HttpClient();
+            using HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+            await using Stream remoteFileStream = await response.Content.ReadAsStreamAsync();
+            // buffering does not provide any performance benefits
+            // await using Stream remoteFileStream = new BufferedStream(await response.Content.ReadAsStreamAsync(), 4096 * 1024) ;
+            
+            byte[] hashValue = await sha256Algorithm.ComputeHashAsync(remoteFileStream);
+            return BitConverter.ToString(hashValue).Replace("-","");
         }
     }
 }

@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using Microsoft.Extensions.Options;
 using TATask.Assets.Interface;
 using TATask.Configuration;
@@ -19,12 +22,23 @@ namespace TATask.Assets
         public async IAsyncEnumerable<Asset> Execute(int limit)
         {
             var assetPages = AssetService.GetAssetPages(limit, PageSize);
-            await foreach (var assetPage in assetPages)
+            var assetPagesEnumerator = assetPages.GetAsyncEnumerator();
+            try
             {
-                foreach (var asset in assetPage)
+                var nextTask = assetPagesEnumerator.MoveNextAsync();
+                while (await nextTask)
                 {
-                    yield return asset;
+                    var currentPage = assetPagesEnumerator.Current.ToArray();
+                    nextTask = assetPagesEnumerator.MoveNextAsync();
+                    foreach (var asset in currentPage)
+                    {
+                        yield return asset;
+                    }
                 }
+            }
+            finally
+            {
+                await assetPagesEnumerator.DisposeAsync().ConfigureAwait(false);
             }
         }
     }

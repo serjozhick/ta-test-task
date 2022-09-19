@@ -3,8 +3,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using TATask.AssetApi;
+using TATask.AssetApi.Dto;
 using TATask.Assets.Interface;
 using TATask.Contracts;
+using Asset = TATask.Contracts.Asset;
 
 namespace TATask.Assets.Implementation
 {
@@ -29,28 +31,46 @@ namespace TATask.Assets.Implementation
             var assetDtos = await AssetService.GetAssets(limit);
 
             var assetsPage = new List<Asset>();
+            Task<Asset[]> previousTask = null;
             foreach (var assetDto in assetDtos)
             {
                 assetsPage.Add(Mapper.Map<Asset>(assetDto));
                 if (assetsPage.Count >= pageSize)
                 {
-                    yield return await FillPrices(assetsPage);
+                    var fillTask = FillPrices(assetsPage.ToArray());
+                    if (previousTask != null)
+                    {
+                        yield return await previousTask;
+                    }
+
+                    previousTask = fillTask;
                     assetsPage = new List<Asset>();
                 }
             }
             if (assetsPage.Count > 0)
             {
-                yield return await FillPrices(assetsPage);
+                var fillTask = FillPrices(assetsPage);
+                if (previousTask != null)
+                {
+                    yield return await previousTask;
+                }
+
+                previousTask = fillTask;
+            }
+            if (previousTask != null)
+            {
+                yield return await previousTask;
             }
         }
 
-        private async Task<Asset[]> FillPrices(List<Asset> assetPage)
+        private async Task<Asset[]> FillPrices(IEnumerable<Asset> assetPage)
         {
+            var assets = assetPage as Asset[] ?? assetPage.ToArray();
             var marketsPage = await PriceService.GetPrices(
-                assetPage.Where(a => a.AssetSymbol != null).Select(a => a.AssetSymbol).ToArray());
+                assets.Where(a => a.AssetSymbol != null).Select(a => a.AssetSymbol).ToArray());
             var assetPricesPage = marketsPage.GroupBy(m => m.BaseSymbol, m => Mapper.Map<AssetPrice>(m))
                 .ToDictionary(g => g.Key, g => g.ToArray());
-            foreach (var asset in assetPage)
+            foreach (var asset in assets)
             {
                 if (assetPricesPage.TryGetValue(asset.AssetSymbol, out var prices))
                 {
@@ -58,7 +78,7 @@ namespace TATask.Assets.Implementation
                 }
             }
 
-            return assetPage.ToArray();
+            return assets;
         }
     }
 }
